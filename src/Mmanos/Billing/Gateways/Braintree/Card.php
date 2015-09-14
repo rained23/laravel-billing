@@ -3,7 +3,7 @@
 use Mmanos\Billing\Gateways\CardInterface;
 use Illuminate\Support\Arr;
 use Braintree_Customer;
-use Braintree_CreditCard;
+use Braintree_PaymentMethod;
 
 class Card implements CardInterface
 {
@@ -27,20 +27,29 @@ class Card implements CardInterface
 	 * @var Braintree_CreditCard
 	 */
 	protected $braintree_card;
+
+	/**
+	 * Braintree customer object.
+	 *
+	 * @var Braintree_Customer
+	 */
+	protected $braintree_customer;
 	
 	/**
 	 * Create a new Braintree card instance.
 	 *
 	 * @param Gateway $gateway
+	 * @param Braintree_Customer $customer
 	 * @param mixed   $id
 	 * 
 	 * @return void
 	 */
-	public function __construct(Gateway $gateway, $id = null)
+	public function __construct(Gateway $gateway, Braintree_Customer $customer = null,$id = null)
 	{
 		$this->gateway = $gateway;
-		
-		if ($id instanceof Braintree_CreditCard) {
+		$this->braintree_customer = $customer;
+
+		if ($id instanceof Braintree_PaymentMethod) {
 			$this->braintree_card = $id;
 			$this->id = $this->braintree_card->token;
 		}
@@ -71,7 +80,7 @@ class Card implements CardInterface
 		}
 		
 		if (!$this->braintree_card) {
-			$this->braintree_card = Braintree_CreditCard::find($this->id);
+			$this->braintree_card = Braintree_PaymentMethod::find($this->id);
 		}
 		
 		if (!$this->braintree_card) {
@@ -118,6 +127,14 @@ class Card implements CardInterface
 	{
 		// Braintree does not support creating a card from a token.
 		// You must use their transparent redirect.
+
+		$braintree_paymentmethod = Braintree_PaymentMethod::create([
+		    'customerId' => $this->braintree_customer->id,
+		    'paymentMethodNonce' => $card_token
+		]);
+		
+		$this->id = $braintree_card->id;
+		
 		return $this;
 	}
 	
