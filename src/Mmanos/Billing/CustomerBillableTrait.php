@@ -18,6 +18,19 @@ trait CustomerBillableTrait
 		
 		return Billing::customer($this->billing_id);
 	}
+
+	/**
+	 * Return the gateway client token
+	 *
+	 * @return Mmanos\Billing\Gateways\CustomerInterface
+	 */
+
+	public function clientToken()
+	{
+
+		return \Mmanos\Billing\Facades\Billing::customer()->clientToken();
+
+	}
 	
 	/**
 	 * Return a customer billing helper object.

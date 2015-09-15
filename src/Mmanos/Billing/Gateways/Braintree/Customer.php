@@ -102,9 +102,9 @@ class Customer implements CustomerInterface
 	 */
 	public function create(array $properties = array())
 	{
-		if(Arr::get(properties,'card_token')):
-			array_merge(properties,['paymentMethodNonce'=>Arr::get(properties,'card_token')]);
-		end;
+		if(Arr::get($properties,'card_token')):
+			$properties = array_merge($properties,['paymentMethodNonce'=>Arr::get($properties,'card_token')]);
+		endif;
 		
 		$this->braintree_customer = Braintree_Customer::create( array_filter($properties) );
 
