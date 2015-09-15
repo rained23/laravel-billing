@@ -10,6 +10,13 @@ interface CustomerInterface
 	public function id();
 	
 	/**
+	 * Gets client token for braintree.
+	 * 
+	 * @return array|null
+	 */
+	public function clientToken();
+
+	/**
 	 * Gets info for a customer.
 	 * 
 	 * @return array|null

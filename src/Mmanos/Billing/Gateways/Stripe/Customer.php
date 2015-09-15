@@ -60,6 +60,12 @@ class Customer implements CustomerInterface
 		return $this->id;
 	}
 	
+
+	public function clientToken()
+	{
+		return null;
+	}
+	
 	/**
 	 * Gets info for a customer.
 	 * 

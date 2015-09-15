@@ -4,6 +4,7 @@ use Mmanos\Billing\Gateways\CardInterface;
 use Illuminate\Support\Arr;
 use Braintree_Customer;
 use Braintree_PaymentMethod;
+use Braintree_CreditCard;
 
 class Card implements CardInterface
 {
@@ -49,7 +50,7 @@ class Card implements CardInterface
 		$this->gateway = $gateway;
 		$this->braintree_customer = $customer;
 
-		if ($id instanceof Braintree_PaymentMethod) {
+		if ($id instanceof Braintree_CreditCard) {
 			$this->braintree_card = $id;
 			$this->id = $this->braintree_card->token;
 		}

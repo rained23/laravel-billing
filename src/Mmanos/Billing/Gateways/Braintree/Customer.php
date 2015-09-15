@@ -5,7 +5,7 @@ use Illuminate\Support\Arr;
 use Braintree_Customer;
 use Braintree_Transaction;
 use Braintree_TransactionSearch;
-
+use Braintree_ClientToken;
 class Customer implements CustomerInterface
 {
 	/**
@@ -59,6 +59,11 @@ class Customer implements CustomerInterface
 	{
 		return $this->id;
 	}
+
+	public function clientToken()
+	{
+		return Braintree_ClientToken::generate();
+	}
 	
 	/**
 	 * Gets info for a customer.
@@ -97,17 +102,12 @@ class Customer implements CustomerInterface
 	 */
 	public function create(array $properties = array())
 	{
-		d(Arr::get($properties, 'card_token'));die();
-		$this->braintree_customer = Braintree_Customer::create(array(
-			'email'  => Arr::get($properties, 'email'),
-			'creditCard' => [
-		        'paymentMethodNonce' => Arr::get($properties, 'card_token') ? Arr::get($properties, 'card_token') : null,
-		        'options' => [
-		            'verifyCard' => true
-		        ]
-		    ]
-		))->customer;
+		if(Arr::get(properties,'card_token')):
+			array_merge(properties,['paymentMethodNonce'=>Arr::get(properties,'card_token')]);
+		end;
 		
+		$this->braintree_customer = Braintree_Customer::create( array_filter($properties) );
+
 		$this->id = $this->braintree_customer->id;
 		
 		return $this;
@@ -200,7 +200,7 @@ class Customer implements CustomerInterface
 	 */
 	public function card($id = null)
 	{
-		return new Card($this->gateway, $id);
+		return new Card($this->gateway, $this->braintree_customer,$id);
 	}
 	
 	/**
