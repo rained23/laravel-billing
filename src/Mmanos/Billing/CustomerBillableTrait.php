@@ -27,8 +27,13 @@ trait CustomerBillableTrait
 
 	public function clientToken()
 	{
+		$billing = null;
 
-		return \Mmanos\Billing\Facades\Billing::customer()->clientToken();
+		if ($this->readyForBilling()) {
+			$billing = $this->billing_id;
+		}
+
+		return \Mmanos\Billing\Facades\Billing::customer($billing)->clientToken();
 
 	}
 	
