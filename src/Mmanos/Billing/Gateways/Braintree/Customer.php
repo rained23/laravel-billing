@@ -106,7 +106,13 @@ class Customer implements CustomerInterface
 			$properties = array_merge($properties,['paymentMethodNonce'=>Arr::get($properties,'card_token')]);
 		endif;
 		
-		$this->braintree_customer = Braintree_Customer::create( array_filter($properties) );
+		$result = Braintree_Customer::create( array_filter($properties) );
+
+		//Check if success or not before continue !! throw exception
+		if($result->success)
+		{
+			$this->braintree_customer = $result->customer;
+		}
 
 		$this->id = $this->braintree_customer->id;
 		

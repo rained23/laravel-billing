@@ -62,7 +62,7 @@ trait CustomerBillableTrait
 	 *
 	 * @return CustomerBillableTrait\Invoices
 	 */
-	public function invoices()
+	public function cashtreeInvoices()
 	{
 		return new CustomerBillableTrait\Invoices($this);
 	}
