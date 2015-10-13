@@ -5,6 +5,7 @@ use Illuminate\Support\Arr;
 use Braintree_Customer;
 use Braintree_PaymentMethod;
 use Braintree_CreditCard;
+use Exception;
 
 class Card implements CardInterface
 {
@@ -129,12 +130,19 @@ class Card implements CardInterface
 		// Braintree does not support creating a card from a token.
 		// You must use their transparent redirect.
 
-		$braintree_paymentmethod = Braintree_PaymentMethod::create([
+		$result = Braintree_PaymentMethod::create([
 		    'customerId' => $this->braintree_customer->id,
 		    'paymentMethodNonce' => $card_token
 		]);
 		
-		$this->id = $braintree_card->id;
+		//Is it success creating a payment method ?
+		if(! $result->success)
+		{
+			throw new Exception('Fail adding card');
+		}
+
+		$this->braintree_card = $result->paymentMethod;
+		$this->id = $this->braintree_card->token;
 		
 		return $this;
 	}
