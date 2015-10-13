@@ -206,7 +206,7 @@ class Customer implements CustomerInterface
 	 */
 	public function card($id = null)
 	{
-		return new Card($this->gateway, $this->braintree_customer,$id);
+		return new Card($this->gateway, $this->getNativeResponse(),$id);
 	}
 	
 	/**
