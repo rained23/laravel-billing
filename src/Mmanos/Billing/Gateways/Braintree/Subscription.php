@@ -1,10 +1,12 @@
 <?php namespace Mmanos\Billing\Gateways\Braintree;
 
 use Mmanos\Billing\Gateways\SubscriptionInterface;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Arr;
 use Braintree_Customer;
 use Braintree_Subscription;
 use Braintree_Plan;
+use Exception;
 
 class Subscription implements SubscriptionInterface
 {
@@ -160,7 +162,14 @@ class Subscription implements SubscriptionInterface
 	 */
 	public function create($plan, array $properties = array())
 	{
+
+		// We need to prepare the token of payment method as required by Braintree to create a subscription
+		// If no card token present we will use the default one
+
+
 		if (!$token = Arr::get($properties, 'card')) {
+
+			//If no card specified, its better to check the card status first before wasting time using it.
 			$cards = $this->braintree_customer->creditCards;
 			$token = $cards[0]->token;
 		}
@@ -190,10 +199,21 @@ class Subscription implements SubscriptionInterface
 				$props['trialDurationUnit'] = 'month';
 			}
 		}
+
+
+		if(!empty($properties['firstBillingDate']))
+		{
+			$props['firstBillingDate'] = $properties['firstBillingDate'];
+		}
 		
-		$braintree_subscription = Braintree_Subscription::create($props)->subscription;
+		$result = Braintree_Subscription::create($props);
 		
-		$this->id = $braintree_subscription->id;
+		if(!$result->success)
+			throw new Exception($result->message);
+		
+		$this->braintree_subscription = $result->subscription;
+
+		$this->id = $this->braintree_subscription->id;
 		$this->braintree_subscription = null;
 		
 		return $this;
@@ -209,7 +229,8 @@ class Subscription implements SubscriptionInterface
 	public function update(array $properties = array())
 	{
 		$info = $this->info();
-		
+
+		// Resuming canceled subscription
 		// Braintree won't let you reactivate a canceled subscription. So create a new one.
 		if ('Canceled' == $this->braintree_subscription->status) {
 			$trial_ends_at = null;
@@ -223,6 +244,13 @@ class Subscription implements SubscriptionInterface
 				)->getTimestamp());
 			}
 			
+			//If its not past grace/period end date, we will create a new subscription that start at the grade period / end date.
+			if( time() < $this->braintree_subscription->billingPeriodEndDate->getTimestamp())
+			{
+				Log::debug('We are setting to resume back after grace period');
+				$properties['firstBillingDate'] = date('Y-m-d H:i:s',$this->braintree_subscription->billingPeriodEndDate->getTimestamp());
+			}
+			Log::debug(serialize($properties));
 			return $this->create(
 				Arr::get($properties, 'plan', $this->braintree_subscription->planId),
 				array_merge(array(
