@@ -70,6 +70,13 @@ class Subscription
 	protected $is_free;
 	
 	/**
+	 * Whether or not this subscription swap should be free prorated.
+	 *
+	 * @var bool
+	 */
+	protected $is_prorate;
+
+	/**
 	 * Create a new SubscriptionBillableTrait Subscription instance.
 	 *
 	 * @param \Illuminate\Database\Eloquent\Model            $model
@@ -193,7 +200,8 @@ class Subscription
 				'quantity' => $quantity,
 			));
 		}
-		
+
+		//Only Canceled subscription else no oh.
 		if (!$this->model->canceled()) {
 			return $this;
 		}
@@ -204,6 +212,7 @@ class Subscription
 		}
 		
 		$this->subscription = Billing::subscription($this->model->billing_subscription, $customer ? $customer->gatewayCustomer() : null);
+
 		if ($this->subscription->info()) {
 			$this->subscription->update(array(
 				'plan'          => $this->plan,
@@ -262,6 +271,31 @@ class Subscription
 			$this->card_token = null;
 		}
 		
+
+		// Prorate manually 
+		// New add-ons/discounts can be added (not created)
+		// Existing add-ons/discounts associated with the subscription can be updated
+		// Existing add-ons/discounts associated with the subscription can be removed
+
+		 // 'discounts' => [
+		 //        'add' => [
+		 //            [
+		 //                'inheritedFromId' => 'discountId1',
+		 //                'amount' => '7.00'
+		 //            ]
+		 //        ],
+		 //        'update' => [
+		 //            [
+		 //                'existingId' => 'discountId2',
+		 //                'amount' => '15.00'
+		 //            ]
+		 //        ],
+		 //        'remove' => ['discountId3']
+		 //    ]
+		 // 
+		 // Setting discount will be carried forward to the next billing
+
+
 		// If no specific trial end date has been set, the default behavior should be
 		// to maintain the current trial state, whether that is "active" or to run
 		// the swap out with the current trial period.
@@ -529,6 +563,17 @@ class Subscription
 		return $this;
 	}
 	
+	/**
+	 * Indicate that this subscription should be prorated.
+	 *
+	 * @return Subscription
+	 */
+	public function isProrate()
+	{
+		$this->is_prorate = true;
+		return $this;
+	}
+
 	/**
 	 * Return the Eloquent model associated with this helper object.
 	 *
