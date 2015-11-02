@@ -1,7 +1,9 @@
 <?php namespace Mmanos\Billing\Gateways\Braintree;
 
 use Illuminate\Support\Facades\Input;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Config;
 use Mmanos\Billing\Facades\Billing;
 use Braintree_WebhookNotification;
 
@@ -12,15 +14,39 @@ class WebhookController extends \Mmanos\Billing\Gateways\WebhookController
 	 *
 	 * @return \Symfony\Component\HttpFoundation\Response
 	 */
-	public function handleWebhook()
+	public function verify()
 	{
 		// Initialize Braintree gateway (config vars).
 		Billing::customer();
 		
+		$result = Braintree_WebhookNotification::verify(
+			Input::get('bt_challenge')
+		);
+		
+		return $result;
+
+	}
+
+	/**
+	 * Handle a Braintree webhook call.
+	 *
+	 * @return \Symfony\Component\HttpFoundation\Response
+	 */
+	public function handleWebhook()
+	{	
+		Log::debug('Getting POST from Braintree');
+		// Initialize Braintree gateway (config vars).
+		Billing::customer();
+
+		Log::debug('Parsing Webhook');
+
 		$payload = Braintree_WebhookNotification::parse(
 			Input::get('bt_signature'), Input::get('bt_payload')
 		);
 		
+		Log::debug('Parse Completed');
+		Log::debug($payload->kind);
+
 		$method = 'handle'.studly_case(str_replace('.', '_', $payload->kind));
 		
 		if (method_exists($this, $method)) {
@@ -40,12 +66,15 @@ class WebhookController extends \Mmanos\Billing\Gateways\WebhookController
 	 */
 	protected function handleSubscriptionCanceled(Braintree_WebhookNotification $payload)
 	{
+		Log::debug('We are running subscriptionCanceled handle');
 		if ($payload->subscription->id) {
 			if ($subscription = $this->getSubscription($payload->subscription->id)) {
 				$subscription->subscription()->refresh();
 			}
 		}
 		
+		Log::debug('Finish Webhook.');
+
 		return new Response('Webhook Handled', 200);
 	}
 	
