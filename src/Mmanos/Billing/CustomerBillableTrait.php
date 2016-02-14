@@ -33,7 +33,7 @@ trait CustomerBillableTrait
 			$billing = $this->billing_id;
 		}
 
-		return \Mmanos\Billing\Facades\Billing::customer($billing)->clientToken();
+		return \Mmanos\Billing\Facades\Billing::customer($billing)->clientToken($default);
 
 	}
 	
