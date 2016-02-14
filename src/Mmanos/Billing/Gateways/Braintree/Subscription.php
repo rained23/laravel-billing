@@ -166,12 +166,20 @@ class Subscription implements SubscriptionInterface
 		// We need to prepare the token of payment method as required by Braintree to create a subscription
 		// If no card token present we will use the default one
 
+		$token = null;
 
 		if (!$token = Arr::get($properties, 'card')) {
 
 			//If no card specified, its better to check the card status first before wasting time using it.
 			$cards = $this->braintree_customer->creditCards;
-			$token = $cards[0]->token;
+
+			foreach($cards as $card):
+				$token = $card->token;
+			endforeach;
+
+			if(!$token)
+				throw new Exception('No available payment method to subscribe');
+			
 		}
 		
 		$props = array(
