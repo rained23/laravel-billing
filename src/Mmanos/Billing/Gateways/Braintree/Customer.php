@@ -60,9 +60,15 @@ class Customer implements CustomerInterface
 		return $this->id;
 	}
 
-	public function clientToken()
+	public function clientToken($default = false)
 	{
-		return Braintree_ClientToken::generate(['customerId'=>$this->id]);
+		if($default)
+		{
+			return Braintree_ClientToken::generate(['customerId'=>$this->id]);
+		}
+
+		return Braintree_ClientToken::generate();
+
 	}
 	
 	/**

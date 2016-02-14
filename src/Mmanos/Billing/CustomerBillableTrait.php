@@ -25,7 +25,7 @@ trait CustomerBillableTrait
 	 * @return Mmanos\Billing\Gateways\CustomerInterface
 	 */
 
-	public function clientToken()
+	public function clientToken($default = false)
 	{
 		$billing = null;
 
