@@ -6,6 +6,7 @@ use Braintree_Customer;
 use Braintree_Transaction;
 use Braintree_TransactionSearch;
 use Braintree_ClientToken;
+use Exception;
 class Customer implements CustomerInterface
 {
 	/**
@@ -108,8 +109,10 @@ class Customer implements CustomerInterface
 	 */
 	public function create(array $properties = array())
 	{
-		if(Arr::get($properties,'card_token')):
+
+		if(Arr::get($properties,'card_token')):		
 			$properties = array_merge($properties,['paymentMethodNonce'=>Arr::get($properties,'card_token')]);
+			Arr::forget($properties,'card_token');
 		endif;
 		
 		$result = Braintree_Customer::create( array_filter($properties) );
@@ -118,6 +121,25 @@ class Customer implements CustomerInterface
 		if($result->success)
 		{
 			$this->braintree_customer = $result->customer;
+		}
+		else
+		{
+			$verification = $result->creditCardVerification;
+			$error = "";
+
+			if($verification->status == 'processor_declined')
+			{
+				$error = $verification->processorResponseText;
+			}
+
+			if($verification->status == 'gateway_rejected')
+			{
+				$error = $verification->gatewayRejectionReason;
+			}
+
+			// return Response::json($result, 422);
+			throw new Exception($error);
+
 		}
 
 		$this->id = $this->braintree_customer->id;
