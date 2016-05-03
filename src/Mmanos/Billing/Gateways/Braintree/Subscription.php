@@ -141,6 +141,7 @@ class Subscription implements SubscriptionInterface
 			'plan'              => $this->braintree_subscription->planId,
 			'amount'            => ((float) $this->braintree_subscription->price * 100),
 			'interval'          => ($interval == 1) ? 'month' : (($interval == 3) ? 'quarter' : 'year'),
+			'interval'          => ($interval == 1) ? 'monthly' : (($interval == 3) ? 'quarterly' : 'yearly'),
 			'active'            => ('Canceled' != $this->braintree_subscription->status),
 			'quantity'          => 1,
 			'started_at'        => date('Y-m-d H:i:s', $this->braintree_subscription->createdAt->getTimestamp()),
