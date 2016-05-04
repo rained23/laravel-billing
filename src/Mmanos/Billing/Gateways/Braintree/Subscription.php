@@ -7,6 +7,8 @@ use Braintree_Customer;
 use Braintree_Subscription;
 use Braintree_Plan;
 use Exception;
+use LogicException;
+use Carbon\Carbon;
 
 class Subscription implements SubscriptionInterface
 {
@@ -16,42 +18,42 @@ class Subscription implements SubscriptionInterface
 	 * @var Gateway
 	 */
 	protected $gateway;
-	
+
 	/**
 	 * Braintree customer object.
 	 *
 	 * @var Braintree_Customer
 	 */
 	protected $braintree_customer;
-	
+
 	/**
 	 * Primary identifier.
 	 *
 	 * @var mixed
 	 */
 	protected $id;
-	
+
 	/**
 	 * Braintree subscription object.
 	 *
 	 * @var Braintree_Subscription
 	 */
 	protected $braintree_subscription;
-	
+
 	/**
 	 * Create a new Braintree subscription instance.
 	 *
 	 * @param Gateway         $gateway
 	 * @param Braintree_Customer $customer
 	 * @param mixed           $id
-	 * 
+	 *
 	 * @return void
 	 */
 	public function __construct(Gateway $gateway, Braintree_Customer $customer = null, $id = null)
 	{
 		$this->gateway = $gateway;
 		$this->braintree_customer = $customer;
-		
+
 		if ($id instanceof Braintree_Subscription) {
 			$this->braintree_subscription = $id;
 			$this->id = $this->braintree_subscription->id;
@@ -60,17 +62,17 @@ class Subscription implements SubscriptionInterface
 			$this->id = $id;
 		}
 	}
-	
+
 	/**
 	 * Gets the id of this instance.
-	 * 
+	 *
 	 * @return mixed
 	 */
 	public function id()
 	{
 		return $this->id;
 	}
-	
+
 	/**
 	 * Gets info for a subscription.
 	 *
@@ -81,15 +83,15 @@ class Subscription implements SubscriptionInterface
 		if (!$this->id) {
 			return null;
 		}
-		
+
 		if (!$this->braintree_subscription) {
 			$this->braintree_subscription = Braintree_Subscription::find($this->id);
 		}
-		
+
 		if (!$this->braintree_subscription) {
 			return null;
 		}
-		
+
 		$trial_ends_at = null;
 		if ($this->braintree_subscription->trialPeriod) {
 			$created_at = clone $this->braintree_subscription->createdAt;
@@ -100,7 +102,7 @@ class Subscription implements SubscriptionInterface
 				)
 			)->getTimestamp());
 		}
-		
+
 		$period_started_at = date('Y-m-d H:i:s', $this->braintree_subscription->createdAt->getTimestamp());
 		if ($this->braintree_subscription->billingPeriodStartDate) {
 			$period_started_at = date('Y-m-d H:i:s', $this->braintree_subscription->billingPeriodStartDate->getTimestamp());
@@ -109,7 +111,7 @@ class Subscription implements SubscriptionInterface
 		if ($this->braintree_subscription->billingPeriodEndDate) {
 			$period_ends_at = date('Y-m-d H:i:s', $this->braintree_subscription->billingPeriodEndDate->getTimestamp());
 		}
-		
+
 		$interval = 1;
 		foreach (Braintree_Plan::all() as $plan) {
 			if ($plan->id == $this->braintree_subscription->planId) {
@@ -117,7 +119,7 @@ class Subscription implements SubscriptionInterface
 				break;
 			}
 		}
-		
+
 		$discounts = array();
 		foreach ($this->braintree_subscription->discounts as $discount) {
 			$started_at = date('Y-m-d H:i:s', $this->braintree_subscription->firstBillingDate->getTimestamp());
@@ -126,7 +128,7 @@ class Subscription implements SubscriptionInterface
 				$cycle = $interval * 60 * 60 * 24 * 30;
 				$ends_at = date('Y-m-d H:i:s', strtotime($started_at) + ($cycle * $discount->numberOfBillingCycles));
 			}
-			
+
 			$discounts[] = array(
 				'coupon'      => $discount->id,
 				'amount_off'  => ((float) $discount->amount * 100),
@@ -135,7 +137,7 @@ class Subscription implements SubscriptionInterface
 				'ends_at'     => $ends_at,
 			);
 		}
-		
+
 		return array(
 			'id'                => $this->id,
 			'plan'              => $this->braintree_subscription->planId,
@@ -151,16 +153,16 @@ class Subscription implements SubscriptionInterface
 			'discounts'         => $discounts,
 		);
 	}
-	
+
 	/**
 	 * Create a new subscription.
 	 *
 	 * @param mixed $plan
 	 * @param array $properties
-	 * 
+	 *
 	 * @return Subscription
 	 */
-	public function create($plan, array $properties = array())
+	public function create($plan, array $properties = array(),array $options = [])
 	{
 
 		// We need to prepare the token of payment method as required by Braintree to create a subscription
@@ -174,23 +176,24 @@ class Subscription implements SubscriptionInterface
 			$cards = $this->braintree_customer->creditCards;
 
 			foreach($cards as $card):
-				$token = $card->token;
+				if(! $card->expired)
+					$token = $card->token;
 			endforeach;
 
 			if(!$token)
 				throw new Exception('No available payment method to subscribe');
-			
+
 		}
-		
+
 		$props = array(
 			'paymentMethodToken' => $token,
 			'planId'             => $plan,
 		);
-		
+
 		if (!empty($properties['coupon'])) {
 			$props['discounts']['add'][] = array('inheritedFromId' => $properties['coupon']);
 		}
-		
+
 		if (!empty($properties['trial_ends_at'])) {
 			$now = time();
 			$tends = strtotime($properties['trial_ends_at']);
@@ -213,120 +216,202 @@ class Subscription implements SubscriptionInterface
 		{
 			$props['firstBillingDate'] = $properties['firstBillingDate'];
 		}
-		
-		$result = Braintree_Subscription::create($props);
-		
-		if(!$result->success)
-			throw new Exception($result->message);
-		
-		$this->braintree_subscription = $result->subscription;
+
+		$props = array_merge($props, $options);
+
+
+		$response = Braintree_Subscription::create($props);
+
+		if (! $response->success) {
+        throw new Exception('Braintree failed to create subscription: '.$response->message);
+    }
+
+		$this->braintree_subscription = $response->subscription;
 
 		$this->id = $this->braintree_subscription->id;
-		$this->braintree_subscription = null;
-		
+
+		// d($this->id);
+
 		return $this;
 	}
-	
+
 	/**
 	 * Update a subscription.
 	 *
 	 * @param array $properties
-	 * 
+	 *
 	 * @return Subscription
 	 */
 	public function update(array $properties = array())
 	{
 		$info = $this->info();
 
-		// Resuming canceled subscription
-		// Braintree won't let you reactivate a canceled subscription. So create a new one.
-		if ('Canceled' == $this->braintree_subscription->status) {
-			$trial_ends_at = null;
-			if ($this->braintree_subscription->trialPeriod) {
-				$created_at = clone $this->braintree_subscription->createdAt;
-				$trial_ends_at = date('Y-m-d H:i:s', $created_at->add(
-					date_interval_create_from_date_string(
-						$this->braintree_subscription->trialDuration . ' '
-						. $this->braintree_subscription->trialDurationUnit . 's'
-					)
-				)->getTimestamp());
+			$plan = $this->findPlan(Arr::get($properties,'plan'));
+
+			if ($this->wouldChangeBillingFrequency($plan)) {
+					return $this->swapAcrossFrequencies($plan);
 			}
-			
-			//If its not past grace/period end date, we will create a new subscription that start at the grade period / end date.
-			if( time() < $this->braintree_subscription->billingPeriodEndDate->getTimestamp())
-			{
-				Log::debug('We are setting to resume back after grace period');
-				$properties['firstBillingDate'] = date('Y-m-d H:i:s',$this->braintree_subscription->billingPeriodEndDate->getTimestamp());
-			}
-			Log::debug(serialize($properties));
-			return $this->create(
-				Arr::get($properties, 'plan', $this->braintree_subscription->planId),
-				array_merge(array(
-					'card'          => $this->braintree_subscription->paymentMethodToken,
-					'trial_ends_at' => $trial_ends_at,
-				), $properties)
-			);
-		}
-		
-		// Braintree won't let you update the trial period.
-		// So if we want to cancel an existing trial period, delete the subscription and recreate it.
-		if ($info['trial_ends_at']
-			&& strtotime($info['trial_ends_at']) > time()
-			&& !empty($properties['trial_ends_at'])
-			&& strtotime($properties['trial_ends_at']) <= time()
-		) {
-			$plan = Arr::get($properties, 'plan', $this->braintree_subscription->planId);
-			$props = array_merge(array(
-				'card'          => $this->braintree_subscription->paymentMethodToken,
-				'trial_ends_at' => $properties['trial_ends_at'],
-			), $properties);
-			
-			$this->cancel();
-			$this->braintree_subscription = null;
-			$this->id = null;
-			
-			return $this->create($plan, $props);
-		}
-		
-		$props = array();
-		
-		if (!empty($properties['plan'])) {
-			$props['planId'] = $properties['plan'];
-			
-			foreach (Braintree_Plan::all() as $plan) {
-				if ($plan->id == $properties['plan']) {
-					$props['price'] = $plan->price;
-				}
-			}
-		}
-		if (!empty($properties['coupon'])) {
-			$props['discounts']['add']['inheritedFromId'] = $properties['coupon'];
-		}
-		
-		if (!empty($properties['card'])) {
-			$props['paymentMethodToken'] = $properties['card'];
-		}
-		
-		Braintree_Subscription::update($this->id, $props);
-		$this->braintree_subscription = null;
-		
+
+			$response = Braintree_Subscription::update($this->braintree_subscription->id, [
+					 'planId' => $plan->id,
+					 'price' => $plan->price * (1 + (0 / 100)),
+					 'neverExpires' => true,
+					 'numberOfBillingCycles' => null,
+					 'options' => [
+							 'prorateCharges' => true,
+					 ],
+			 ]);
+
+			 if (! $response->success) {
+					 throw new Exception('Braintree failed to swap plans: '.$response->message);
+			 }
+
 		return $this;
 	}
-	
+
+	protected function findPlan($id)
+	{
+		$plans = Braintree_Plan::all();
+		foreach ($plans as $plan) {
+					 if ($plan->id === $id) {
+							return $plan;
+					 }
+		}
+	}
+
+	/**
+	* Determine if the given plan would alter the billing frequency.
+	*
+	* @param  string  $plan
+	* @return bool
+	*/
+	protected function wouldChangeBillingFrequency($plan)
+	{
+		return $plan->billingFrequency !==
+			$this->findPlan($this->braintree_subscription->planId)->billingFrequency;
+	}
+
+	/**
+	* Swap the subscription to a new Braintree plan with a different frequency.
+	*
+	* @param  string  $plan
+	* @return $this
+	*/
+		protected function swapAcrossFrequencies($plan)
+		{
+				$currentPlan = $this->findPlan($this->braintree_subscription->planId);
+				$discount = $this->switchingToMonthlyPlan($currentPlan, $plan)
+																? $this->getDiscountForSwitchToMonthly($currentPlan, $plan)
+																: $this->getDiscountForSwitchToYearly();
+				$options = [];
+				if ($discount->amount > 0 && $discount->numberOfBillingCycles > 0) {
+						$options = ['discounts' => ['add' => [
+								[
+										'inheritedFromId' => 'plan-credit',
+										'amount' => (float) $discount->amount,
+										'numberOfBillingCycles' => $discount->numberOfBillingCycles,
+								],
+						]]];
+				}
+
+				Braintree_Subscription::cancel($this->braintree_subscription->id);
+				// d($this->id);
+
+				return $this->create($plan->id,[],$options);
+		}
+
+		/**
+     * Determine if the user is switching form yearly to monthly billing.
+     *
+     * @param  BraintreePlan  $currentPlan
+     * @param  BraintreePlan  $plan
+     * @return bool
+     */
+    protected function switchingToMonthlyPlan($currentPlan, $plan)
+    {
+        return $currentPlan->billingFrequency == 12 && $plan->billingFrequency == 1;
+    }
+
+    /**
+     * Get the discount to apply when switching to a monthly plan.
+     *
+     * @param  BraintreePlan  $currentPlan
+     * @param  BraintreePlan  $plan
+     * @return object
+     */
+    protected function getDiscountForSwitchToMonthly($currentPlan, $plan)
+    {
+        return (object) [
+            'amount' => $plan->price,
+            'numberOfBillingCycles' => floor(
+                $this->moneyRemainingOnYearlyPlan($currentPlan) / $plan->price
+            ),
+        ];
+    }
+    /**
+     * Calculate the amount of discount to apply to a swap to monthly billing.
+     *
+     * @param  BraintreePlan  $plan
+     * @return float
+     */
+    protected function moneyRemainingOnYearlyPlan($plan)
+    {
+        return ($plan->price / 365) * Carbon::today()->diffInDays(Carbon::instance(
+            $this->braintree_subscription->billingPeriodEndDate
+        ), false);
+    }
+    /**
+     * Get the discount to apply when switching to a yearly plan.
+     *
+     * @return object
+     */
+    protected function getDiscountForSwitchToYearly()
+    {
+        $amount = 0;
+        foreach ($this->braintree_subscription->discounts as $discount) {
+            if ($discount->id == 'plan-credit') {
+                $amount += (float) $discount->amount * $discount->numberOfBillingCycles;
+            }
+        }
+        return (object) [
+            'amount' => $amount,
+            'numberOfBillingCycles' => 1,
+        ];
+    }
+
 	/**
 	 * Cancel a subscription.
 	 *
 	 * @param bool $at_period_end
-	 * 
+	 *
 	 * @return Subscription
 	 */
 	public function cancel($at_period_end = true)
 	{
-		Braintree_Subscription::cancel($this->id);
-		$this->braintree_subscription = null;
+		// Braintree_Subscription::cancel($this->id);
+		// $this->braintree_subscription = null;
+
+		// Soft delete the subscription
+		Braintree_Subscription::update($this->id, [
+							 'numberOfBillingCycles' => $this->braintree_subscription->currentBillingCycle,
+					 ]);
+
 		return $this;
+
 	}
-	
+
+	public function resume()
+	{
+
+			Braintree_Subscription::update($this->id, [
+					'neverExpires' => true,
+					'numberOfBillingCycles' => null,
+			]);
+
+			return $this;
+
+	}
+
 	/**
 	 * Gets the native subscription response.
 	 *
