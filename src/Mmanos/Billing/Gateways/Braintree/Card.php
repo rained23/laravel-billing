@@ -96,6 +96,8 @@ class Card implements CardInterface
 			'exp_month'       => $this->braintree_card->expirationMonth,
 			'exp_year'        => $this->braintree_card->expirationYear,
 			'name'            => $this->braintree_card->cardholderName,
+			'default'					=> $this->braintree_card->default,
+			'expired'					=> $this->braintree_card->expired,
 			'address_line1'   => null,
 			'address_line2'   => null,
 			'address_city'    => null,
