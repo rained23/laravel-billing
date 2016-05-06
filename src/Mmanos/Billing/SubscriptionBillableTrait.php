@@ -126,7 +126,7 @@ trait SubscriptionBillableTrait
 	 */
 	public function billingIsActive()
 	{
-		return $this->billing_active;
+		return ($this->billing_active) ? true : false;
 	}
 
 	/**

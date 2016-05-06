@@ -219,7 +219,6 @@ class Subscription implements SubscriptionInterface
 
 		$props = array_merge($props, $options);
 
-
 		$response = Braintree_Subscription::create($props);
 
 		if (! $response->success) {
@@ -229,8 +228,6 @@ class Subscription implements SubscriptionInterface
 		$this->braintree_subscription = $response->subscription;
 
 		$this->id = $this->braintree_subscription->id;
-
-		// d($this->id);
 
 		return $this;
 	}
@@ -244,7 +241,7 @@ class Subscription implements SubscriptionInterface
 	 */
 	public function update(array $properties = array())
 	{
-		$info = $this->info();
+			$info = $this->info();
 
 			$plan = $this->findPlan(Arr::get($properties,'plan'));
 
@@ -265,6 +262,10 @@ class Subscription implements SubscriptionInterface
 			 if (! $response->success) {
 					 throw new Exception('Braintree failed to swap plans: '.$response->message);
 			 }
+
+			 $this->braintree_subscription = $response->subscription;
+
+			 $this->id = $this->braintree_subscription->id;
 
 		return $this;
 	}
@@ -300,22 +301,33 @@ class Subscription implements SubscriptionInterface
 		protected function swapAcrossFrequencies($plan)
 		{
 				$currentPlan = $this->findPlan($this->braintree_subscription->planId);
-				$discount = $this->switchingToMonthlyPlan($currentPlan, $plan)
-																? $this->getDiscountForSwitchToMonthly($currentPlan, $plan)
-																: $this->getDiscountForSwitchToYearly();
+				// $discount = $this->switchingToMonthlyPlan($currentPlan, $plan)
+				// 												? $this->getDiscountForSwitchToMonthly($currentPlan, $plan)
+				// 												: $this->getDiscountForSwitchToYearly();
+
+				$discount = $this->getProrate($currentPlan,$plan);
+
+				//We might need to carry forward any balance from previous subscription
+				$balance = 0;
+				if($this->braintree_subscription->status === 'Active')
+				{
+					if( (float) $this->braintree_subscription->balance < 0)
+						$balance = abs($this->braintree_subscription->balance);
+
+				}
+
 				$options = [];
-				if ($discount->amount > 0 && $discount->numberOfBillingCycles > 0) {
+				if ($discount->amount > 0 || $balance > 0) {
 						$options = ['discounts' => ['add' => [
 								[
 										'inheritedFromId' => 'plan-credit',
-										'amount' => (float) $discount->amount,
-										'numberOfBillingCycles' => $discount->numberOfBillingCycles,
+										'amount' => (float) number_format($discount->amount+$balance,2),
+										'numberOfBillingCycles' => 1,
 								],
 						]]];
 				}
 
 				Braintree_Subscription::cancel($this->braintree_subscription->id);
-				// d($this->id);
 
 				return $this->create($plan->id,[],$options);
 		}
@@ -339,14 +351,19 @@ class Subscription implements SubscriptionInterface
      * @param  BraintreePlan  $plan
      * @return object
      */
-    protected function getDiscountForSwitchToMonthly($currentPlan, $plan)
+    protected function getProrate($currentPlan, $plan)
     {
-        return (object) [
-            'amount' => $plan->price,
-            'numberOfBillingCycles' => floor(
-                $this->moneyRemainingOnYearlyPlan($currentPlan) / $plan->price
-            ),
-        ];
+        // return (object) [
+        //     'amount' => $plan->price,
+        //     'numberOfBillingCycles' => floor(
+        //         $this->moneyRemainingOnYearlyPlan($currentPlan) / $plan->price
+        //     ),
+        // ];
+				$discount = $this->moneyRemaining($currentPlan);
+				return (object) [
+						'amount' => $discount,
+						'numberOfBillingCycles' => ($discount) ? 1 : 0
+				];
     }
     /**
      * Calculate the amount of discount to apply to a swap to monthly billing.
@@ -354,11 +371,11 @@ class Subscription implements SubscriptionInterface
      * @param  BraintreePlan  $plan
      * @return float
      */
-    protected function moneyRemainingOnYearlyPlan($plan)
+    protected function moneyRemaining($plan)
     {
-        return ($plan->price / 365) * Carbon::today()->diffInDays(Carbon::instance(
-            $this->braintree_subscription->billingPeriodEndDate
-        ), false);
+				$estimated = ($plan->price / ($plan->billingFrequency * 30)) * Carbon::today()->diffInDays(Carbon::instance(
+            $this->braintree_subscription->billingPeriodEndDate), false);
+        return ($estimated > $plan->price) ? $plan->price : $estimated;
     }
     /**
      * Get the discount to apply when switching to a yearly plan.
