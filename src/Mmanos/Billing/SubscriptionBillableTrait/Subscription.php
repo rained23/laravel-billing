@@ -156,6 +156,8 @@ class Subscription
 				'card'          => $this->card,
 			)));
 
+		$this->model->billing_subscription_ends_at = null;
+		$this->model->save();
 		$this->refresh();
 
 		return $this;
