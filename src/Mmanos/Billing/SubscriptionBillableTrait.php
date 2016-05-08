@@ -124,7 +124,7 @@ trait SubscriptionBillableTrait
 	 */
 	public function billingIsActive()
 	{
-		return ($this->billing_active) ? true : false;
+		return ($this->billing_active && is_null($this->billing_subscription_ends_at)) ? true : false;
 	}
 
 	/**

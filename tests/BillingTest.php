@@ -156,7 +156,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $user->subscription()->cancel();
 
         $this->assertTrue($user->canceled());
-        $this->assertTrue($user->billingIsActive());
+        $this->assertTrue(! $user->billingIsActive());
         $this->assertNotNull($user->billing_subscription_ends_at);
         $this->assertTrue($user->onGracePeriod());
 
