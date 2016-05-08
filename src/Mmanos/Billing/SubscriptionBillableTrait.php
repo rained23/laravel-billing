@@ -75,15 +75,13 @@ trait SubscriptionBillableTrait
 	public function subscribed()
 	{
 		if ($this->billing_free) {
-			if (!$this->billing_subscription_ends_at
-				|| time() < strtotime($this->billing_subscription_ends_at)
-			) {
+			if ($this->onGracePeriod()) {
 				return true;
 			}
 		}
 
 		if (!isset($this->cardUpFront) || $this->cardUpFront) {
-			return $this->billingIsActive() || $this->onGracePeriod();
+			return  $this->onGracePeriod();
 		}
 
 		return $this->billingIsActive() || $this->onGracePeriod() || $this->onTrial();
@@ -106,7 +104,7 @@ trait SubscriptionBillableTrait
 	 */
 	public function canceled()
 	{
-		return $this->everSubscribed() && !$this->billingIsActive();
+		return $this->everSubscribed() && $this->onGracePeriod();
 	}
 
 	/**

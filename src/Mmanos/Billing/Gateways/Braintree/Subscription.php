@@ -408,7 +408,7 @@ class Subscription implements SubscriptionInterface
 		// Braintree_Subscription::cancel($this->id);
 		// $this->braintree_subscription = null;
 
-		// Soft delete the subscription
+		// Soft cancel the subscription
 		Braintree_Subscription::update($this->id, [
 							 'numberOfBillingCycles' => $this->braintree_subscription->currentBillingCycle,
 					 ]);
