@@ -172,7 +172,7 @@ class Subscription
 	 */
 	public function cancel($at_period_end = true)
 	{
-		if (!$this->model->billingIsActive()) {
+		if (!$this->model->everSubscribed()) {
 			return $this->storeLocal(array(
 				'subscription_ends_at' => date('Y-m-d H:i:s'),
 			));
@@ -182,6 +182,7 @@ class Subscription
 
 		$this->model->billing_subscription_ends_at = $this->period_ends_at;
 		$this->model->save();
+
 		$this->refresh();
 
 		return $this;
@@ -369,7 +370,6 @@ class Subscription
 			$this->model->billing_quantity = Arr::get($info, 'quantity');
 			$this->model->billing_card = Arr::get($info, 'card');
 			$this->model->billing_trial_ends_at = Arr::get($info, 'trial_ends_at');
-			//$this->model->billing_subscription_ends_at = null;
 			$this->model->billing_subscription_discounts = Arr::get($info, 'discounts');
 
 			if (!Arr::get($info, 'active')) {

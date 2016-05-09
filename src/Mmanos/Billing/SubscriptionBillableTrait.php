@@ -104,7 +104,7 @@ trait SubscriptionBillableTrait
 	 */
 	public function canceled()
 	{
-		return $this->everSubscribed() && $this->onGracePeriod();
+		return ! is_null($this->billing_subscription_ends_at);
 	}
 
 	/**
