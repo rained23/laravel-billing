@@ -188,6 +188,8 @@ class Subscription implements SubscriptionInterface
 		$props = array(
 			'paymentMethodToken' => $token,
 			'planId'             => $plan,
+			'neverExpires'			 => true,
+			'numberOfBillingCycles' => null
 		);
 
 		if (!empty($properties['coupon'])) {
@@ -410,6 +412,7 @@ class Subscription implements SubscriptionInterface
 
 		// Soft cancel the subscription
 		Braintree_Subscription::update($this->id, [
+							 'neverExpires' => false,
 							 'numberOfBillingCycles' => $this->braintree_subscription->currentBillingCycle,
 					 ]);
 
