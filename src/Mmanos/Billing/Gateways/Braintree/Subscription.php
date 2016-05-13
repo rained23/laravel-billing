@@ -149,6 +149,7 @@ class Subscription implements SubscriptionInterface
 			'period_started_at' => $period_started_at,
 			'period_ends_at'    => $period_ends_at,
 			'trial_ends_at'     => $trial_ends_at,
+			'neverExpires'			=> $this->braintree_subscription->neverExpires,
 			'card'              => $this->braintree_subscription->paymentMethodToken,
 			'discounts'         => $discounts,
 		);
