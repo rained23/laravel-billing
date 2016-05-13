@@ -372,7 +372,7 @@ class Subscription
 			$this->model->billing_trial_ends_at = Arr::get($info, 'trial_ends_at');
 			$this->model->billing_subscription_discounts = Arr::get($info, 'discounts');
 
-			if (!Arr::get($info, 'active') || !Arr::get($info,'neverExpires')) {
+			if (!Arr::get($info, 'active') || (Arr::get($info, 'active') && !Arr::get($info,'neverExpires') ) ) {
 				$this->model->billing_active = 0;
 				$this->model->billing_trial_ends_at = null;
 				$this->model->billing_subscription_ends_at = Arr::get($info, 'period_ends_at', date('Y-m-d H:i:s'));
