@@ -412,10 +412,13 @@ class Subscription implements SubscriptionInterface
 		// $this->braintree_subscription = null;
 
 		// Soft cancel the subscription
-		Braintree_Subscription::update($this->id, [
-							 'neverExpires' => false,
-							 'numberOfBillingCycles' => $this->braintree_subscription->currentBillingCycle,
-					 ]);
+		$response = Braintree_Subscription::update($this->id, [
+									 'neverExpires' => false,
+									 'numberOfBillingCycles' => $this->braintree_subscription->currentBillingCycle,
+							 ]);
+
+		$this->braintree_subscription = $response->subscription;
+		$this->id = $this->braintree_subscription->id;
 
 		return $this;
 
@@ -424,10 +427,13 @@ class Subscription implements SubscriptionInterface
 	public function resume()
 	{
 
-			Braintree_Subscription::update($this->id, [
-					'neverExpires' => true,
-					'numberOfBillingCycles' => null,
-			]);
+			$response = Braintree_Subscription::update($this->id, [
+										'neverExpires' => true,
+										'numberOfBillingCycles' => null,
+								]);
+
+			$this->braintree_subscription = $response->subscription;
+			$this->id = $this->braintree_subscription->id;
 
 			return $this;
 

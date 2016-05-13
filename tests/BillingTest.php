@@ -73,6 +73,12 @@ class BillingTest extends Orchestra\Testbench\TestCase
 
       public function tearDown()
       {
+         $users = User::all();
+
+         foreach($users as $user):
+           $user->billing()->delete();
+         endforeach;
+
           $this->schema()->drop('users');
       }
 
@@ -90,7 +96,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
 
         $this->assertTrue($user->readyForBilling());
 
-        $user->billing()->delete();
+
 
       }
 
@@ -113,7 +119,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
 
         $this->assertTrue($user->subscribed());
 
-        $user->billing()->delete();
+
 
       }
 
@@ -130,8 +136,9 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertEquals(1,count($user->creditcards()->get()));
         $this->assertTrue($user->billingIsActive());
         $this->assertEquals(1,count($user->subscriptions()->get()));
+        $this->assertTrue($user->billingIsActive());
 
-        $user->billing()->delete();
+
 
       }
 
@@ -160,7 +167,45 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertNotNull($user->billing_subscription_ends_at);
         $this->assertTrue($user->onGracePeriod());
 
-        $user->billing()->delete();
+
+
+      }
+
+      public function testUserSubscriptionCanBeResumed()
+      {
+        $user = User::create([
+            'email' => $this->faker->email,
+            'name' => $this->faker->name
+        ]);
+
+        $user->billing()->create([
+          'email' => $user->email,
+          'firstName' => $this->faker->name
+        ]);
+
+        $user->subscription('premium-monthly')->withCardToken($this->getTestToken())
+          ->create();
+
+        $this->assertTrue($user->subscribed());
+
+        $user->subscription()->cancel();
+
+
+        $this->assertTrue($user->canceled());
+        $this->assertTrue(! $user->billingIsActive());
+        $this->assertNotNull($user->billing_subscription_ends_at);
+        $this->assertTrue($user->onGracePeriod());
+
+        //check if user has been resumed
+        $user->subscription()->resume();
+
+        $this->assertTrue($user->billingIsActive());
+        $this->assertTrue($user->subscribed());
+        $this->assertTrue(! $user->expired());
+        $this->assertTrue(! $user->onGracePeriod());
+        $this->assertTrue(! $user->canceled());
+
+
 
       }
 
@@ -181,7 +226,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
 
         $this->assertTrue($user->billingIsActive());
 
-        $user->billing()->delete();
+
 
       }
 
@@ -209,7 +254,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertNotNull($user->billing_subscription);
         $this->assertEquals('premium-yearly', $user->billing_plan);
 
-        $user->billing()->delete();
+
 
       }
 
@@ -237,7 +282,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertNotNull($user->billing_subscription);
         $this->assertEquals('premium-monthly', $user->billing_plan);
 
-        $user->billing()->delete();
+
 
       }
 
@@ -271,7 +316,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertNotNull($user->billing_subscription);
         $this->assertEquals('premium-yearly', $user->billing_plan);
 
-        $user->billing()->delete();
+
 
       }
 
@@ -299,7 +344,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertNotNull($user->billing_subscription);
         $this->assertEquals('premium-monthly', $user->billing_plan);
 
-        $user->billing()->delete();
+
       }
 
       public function testDowngradeSubscriptionOnSameInterval()
@@ -326,7 +371,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertNotNull($user->billing_subscription);
         $this->assertEquals('basic-monthly', $user->billing_plan);
 
-        $user->billing()->delete();
+
 
       }
 
@@ -360,7 +405,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertNotNull($user->billing_subscription);
         $this->assertEquals('basic-monthly', $user->billing_plan);
 
-        $user->billing()->delete();
+
 
       }
 
@@ -398,7 +443,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertNotNull($user->billing_subscription);
         $this->assertEquals('premium-monthly', $user->billing_plan);
         $this->assertTrue($user->billingIsActive());
-        $user->billing()->delete();
+
 
       }
 
@@ -429,7 +474,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertEquals('premium-yearly', $user->billing_plan);
         $this->assertTrue($user->billingIsActive());
 
-        $user->billing()->delete();
+
 
       }
 
@@ -460,7 +505,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertEquals('basic-monthly', $user->billing_plan);
         $this->assertTrue($user->billingIsActive());
 
-        $user->billing()->delete();
+
 
       }
 
@@ -498,7 +543,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertNotNull($user->billing_subscription);
         $this->assertEquals('premium-monthly', $user->billing_plan);
         $this->assertTrue($user->billingIsActive());
-        $user->billing()->delete();
+
 
       }
 
@@ -536,7 +581,7 @@ class BillingTest extends Orchestra\Testbench\TestCase
         $this->assertNotNull($user->billing_subscription);
         $this->assertEquals('basic-monthly', $user->billing_plan);
         $this->assertTrue($user->billingIsActive());
-        $user->billing()->delete();
+
 
       }
 
