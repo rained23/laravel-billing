@@ -16,9 +16,15 @@
 </style>
 
 <!-- Invoice Info -->
+
+	@if(isset($logoUrl))
+		<div style="text-align:center">
+			<img src="$logoUrl" style="width:150px">
+		</div>
+	@endif
 <p>
-	@if (isset($vendor))
-		<strong>{{ $vendor }}<br>
+	@if(isset($vendor))
+		<strong>{{$vendor}}</strong>
 	@endif
 	<strong>Invoice ID:</strong> {{ $invoice->id }}<br>
 	<strong>Invoice Date:</strong> {{ date('M jS, Y', strtotime($invoice->date)) }}<br>

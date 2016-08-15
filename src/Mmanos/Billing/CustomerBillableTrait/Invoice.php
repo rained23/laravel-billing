@@ -1,7 +1,7 @@
 <?php namespace Mmanos\Billing\CustomerBillableTrait;
 
 use Dompdf\Dompdf;
-// use Dompdf\Options;
+use Dompdf\Options;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
@@ -101,8 +101,9 @@ class Invoice
 			//  if (file_exists($configPath = base_path().'/vendor/dompdf/dompdf/dompdf_config.inc.php')) {
 			// 		 require_once $configPath;
 			//  }
-
-			 $dompdf = new Dompdf;
+			 $options = new Options();
+			 $options->set('isRemoteEnabled',true);
+			 $dompdf = new Dompdf($options);
 			 $dompdf->loadHtml($this->view($data)->render());
 			 $dompdf->render();
 			 return $dompdf->output();
