@@ -3,6 +3,7 @@
 use DOMPDF;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class Invoice
 {
@@ -111,9 +112,9 @@ class Invoice
 		* @param  array   $data
 		* @return \Symfony\Component\HttpFoundation\Response
 		*/
-	 public function download(array $data)
+	 public function download(array $data = array())
 	 {
-			 $filename = $data['product'].'_'.$this->date()->month.'_'.$this->date()->year.'.pdf';
+			 $filename = $data['product'].'_'.$this->date.'.pdf';
 			 return new Response($this->pdf($data), 200, [
 					 'Content-Description' => 'File Transfer',
 					 'Content-Disposition' => 'attachment; filename="'.$filename.'"',
