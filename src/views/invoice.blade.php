@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Invoice - {{$invoice-id}}</title>
+    <title>Invoice - {{$invoice->id}}</title>
 
     <style>
     .invoice-box{
