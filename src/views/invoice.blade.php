@@ -17,8 +17,8 @@
 
 <!-- Invoice Info -->
 <p>
-	@if (isset($product))
-		<strong>Product:</strong> {{ $product }}<br>
+	@if (isset($vendor))
+		<strong>{{ $vendor }}<br>
 	@endif
 	<strong>Invoice ID:</strong> {{ $invoice->id }}<br>
 	<strong>Invoice Date:</strong> {{ date('M jS, Y', strtotime($invoice->date)) }}<br>
