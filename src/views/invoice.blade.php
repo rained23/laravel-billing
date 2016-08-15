@@ -89,7 +89,7 @@
     <div class="invoice-box">
         <table cellpadding="0" cellspacing="0">
             <tr class="top">
-                <td colspan="2">
+                <td colspan="3">
                     <table>
                         <tr>
                             <td class="title">
