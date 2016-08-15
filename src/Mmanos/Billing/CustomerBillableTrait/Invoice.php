@@ -1,7 +1,7 @@
 <?php namespace Mmanos\Billing\CustomerBillableTrait;
 
 use Dompdf\Dompdf;
-use Dompdf\Options;
+// use Dompdf\Options;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
@@ -98,14 +98,12 @@ class Invoice
 			 if (! defined('DOMPDF_ENABLE_AUTOLOAD')) {
 					 define('DOMPDF_ENABLE_AUTOLOAD', false);
 			 }
-			 if (file_exists($configPath = base_path().'/vendor/dompdf/dompdf/dompdf_config.inc.php')) {
-					 require_once $configPath;
-			 }
+			//  if (file_exists($configPath = base_path().'/vendor/dompdf/dompdf/dompdf_config.inc.php')) {
+			// 		 require_once $configPath;
+			//  }
 
-			 $options = new Options();
-			 $options->set('isRemoteEnabled', TRUE);
 			 $dompdf = new Dompdf($options);
-			 $dompdf->load_html($this->view($data)->render());
+			 $dompdf->loadHtml($this->view($data)->render());
 			 $dompdf->render();
 			 return $dompdf->output();
 	 }
@@ -116,16 +114,16 @@ class Invoice
 		* @param  array   $data
 		* @return \Symfony\Component\HttpFoundation\Response
 		*/
-	 public function download(array $data = array())
-	 {
-			 $filename = $data['product'].'_'.$this->date.'.pdf';
-			 return new Response($this->pdf($data), 200, [
-					 'Content-Description' => 'File Transfer',
-					 'Content-Disposition' => 'attachment; filename="'.$filename.'"',
-					 'Content-Transfer-Encoding' => 'binary',
-					 'Content-Type' => 'application/pdf',
-			 ]);
-	 }
+		public function download(array $data = array())
+ 	 {
+ 			 $filename = $data['product'].'_'.$this->date.'.pdf';
+ 			 return new Response($this->pdf($data), 200, [
+ 					 'Content-Description' => 'File Transfer',
+ 					 'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+ 					 'Content-Transfer-Encoding' => 'binary',
+ 					 'Content-Type' => 'application/pdf',
+ 			 ]);
+ 	 }
 
 	/**
 	 * Convert this instance to an array.
