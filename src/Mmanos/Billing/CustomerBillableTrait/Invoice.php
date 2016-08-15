@@ -11,27 +11,27 @@ class Invoice
 	 * @var \Illuminate\Database\Eloquent\Model
 	 */
 	protected $model;
-	
+
 	/**
 	 * Invoice gateway instance.
 	 *
 	 * @var \Mmanos\Billing\Gateways\InvoiceInterface
 	 */
 	protected $invoice;
-	
+
 	/**
 	 * Invoice info array.
 	 *
 	 * @var array
 	 */
 	protected $info;
-	
+
 	/**
 	 * Create a new CustomerBillableTrait Invoice instance.
 	 *
 	 * @param \Illuminate\Database\Eloquent\Model       $model
 	 * @param \Mmanos\Billing\Gateways\InvoiceInterface $invoice
-	 * 
+	 *
 	 * @return void
 	 */
 	public function __construct(\Illuminate\Database\Eloquent\Model $model, \Mmanos\Billing\Gateways\InvoiceInterface $invoice)
@@ -40,7 +40,7 @@ class Invoice
 		$this->invoice = $invoice;
 		$this->info = $invoice->info();
 	}
-	
+
 	/**
 	 * Return an array of line items for this invoice.
 	 *
@@ -49,19 +49,19 @@ class Invoice
 	public function items()
 	{
 		$items = array();
-		
+
 		foreach ($this->items as $item) {
 			$items[] = new InvoiceItem($this->model, $this->invoice, $item);
 		}
-		
+
 		return $items;
 	}
-	
+
 	/**
 	 * Get the invoice view.
 	 *
 	 * @param array $data
-	 * 
+	 *
 	 * @return View
 	 */
 	public function view(array $data = array())
@@ -71,19 +71,56 @@ class Invoice
 			array_merge($data, array('invoice' => $this))
 		);
 	}
-	
+
 	/**
 	 * Get the rendered HTML content of the invoice view.
 	 *
 	 * @param array $data
-	 * 
+	 *
 	 * @return string
 	 */
 	public function render(array $data = array())
 	{
 		return $this->view($data)->render();
 	}
-	
+
+	 /**
+		* Capture the invoice as a PDF and return the raw bytes.
+		*
+		* @param  array  $data
+		* @return string
+		*/
+	 public function pdf(array $data)
+	 {
+			 if (! defined('DOMPDF_ENABLE_AUTOLOAD')) {
+					 define('DOMPDF_ENABLE_AUTOLOAD', false);
+			 }
+			 if (file_exists($configPath = base_path().'/vendor/dompdf/dompdf/dompdf_config.inc.php')) {
+					 require_once $configPath;
+			 }
+			 $dompdf = new DOMPDF;
+			 $dompdf->load_html($this->view($data)->render());
+			 $dompdf->render();
+			 return $dompdf->output();
+	 }
+
+	 /**
+		* Create an invoice download response.
+		*
+		* @param  array   $data
+		* @return \Symfony\Component\HttpFoundation\Response
+		*/
+	 public function download(array $data)
+	 {
+			 $filename = $data['product'].'_'.$this->date()->month.'_'.$this->date()->year.'.pdf';
+			 return new Response($this->pdf($data), 200, [
+					 'Content-Description' => 'File Transfer',
+					 'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+					 'Content-Transfer-Encoding' => 'binary',
+					 'Content-Type' => 'application/pdf',
+			 ]);
+	 }
+
 	/**
 	 * Convert this instance to an array.
 	 *
@@ -93,24 +130,24 @@ class Invoice
 	{
 		return $this->info;
 	}
-	
+
 	/**
 	 * Dynamically check a values existence from the invoice.
 	 *
 	 * @param string $key
-	 * 
+	 *
 	 * @return bool
 	 */
 	public function __isset($key)
 	{
 		return isset($this->info[$key]);
 	}
-	
+
 	/**
 	 * Dynamically get values from the invoice.
 	 *
 	 * @param string $key
-	 * 
+	 *
 	 * @return mixed
 	 */
 	public function __get($key)
