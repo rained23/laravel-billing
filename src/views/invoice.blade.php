@@ -19,7 +19,7 @@
 
 	@if(isset($logoUrl))
 		<div style="text-align:center">
-			<img src="$logoUrl" style="width:150px">
+			<img src="{{$logoUrl}}" style="width:150px">
 		</div>
 	@endif
 <p>
