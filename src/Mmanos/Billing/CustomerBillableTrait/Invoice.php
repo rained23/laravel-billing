@@ -102,7 +102,7 @@ class Invoice
 			// 		 require_once $configPath;
 			//  }
 
-			 $dompdf = new Dompdf($options);
+			 $dompdf = new Dompdf;
 			 $dompdf->loadHtml($this->view($data)->render());
 			 $dompdf->render();
 			 return $dompdf->output();
