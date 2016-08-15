@@ -1,5 +1,6 @@
 <?php namespace Mmanos\Billing\CustomerBillableTrait;
 
+use DOMPDF;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\View;
 
@@ -90,7 +91,7 @@ class Invoice
 		* @param  array  $data
 		* @return string
 		*/
-	 public function pdf(array $data)
+	 public function pdf(array $data = array())
 	 {
 			 if (! defined('DOMPDF_ENABLE_AUTOLOAD')) {
 					 define('DOMPDF_ENABLE_AUTOLOAD', false);
